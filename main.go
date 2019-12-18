@@ -1,0 +1,70 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"regexp"
+
+	"github.com/gorilla/mux"
+
+	_ "github.com/go-sql-driver/mysql"
+	stomp "github.com/go-stomp/stomp"
+)
+
+type MyCustomHandler struct {
+	conn *stomp.Conn
+}
+
+func (handler *MyCustomHandler) rootEndpoint(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Hello World! GOGOGOGOGOOGGOGOOGGOOGOGGOOGGOGOGOGOGOGGOGOGOGOGO ")
+}
+
+func (handler *MyCustomHandler) checkNumberRequest(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	number := r.FormValue("number")
+	command := r.FormValue("command")
+	if number != "" && len(number) == 10 && regexp.MustCompile(`^[0-9]+$`).MatchString(number) && command != "" && len(command) == 3 {
+		err := handler.conn.Send(
+			"/topic/request", // destination
+			"text/plain",     // content-type
+			[]byte(fmt.Sprintf("%s%s", command, number))) // body
+		if err != nil {
+			panic(err.Error())
+		}
+		sub, err := handler.conn.Subscribe("/topic/response/"+command+number, stomp.AckAuto)
+		if err != nil {
+			panic(err.Error())
+		}
+		resp := <-sub.C
+		var sresp string = string(resp.Body)
+		log.Println(sresp)
+		fmt.Fprintf(w, sresp)
+
+		err = sub.Unsubscribe()
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+		fmt.Fprintf(w, "Invalid data")
+	}
+}
+
+func handleRequests(handler *MyCustomHandler) {
+	myRouter := mux.NewRouter().StrictSlash(true)
+	myRouter.HandleFunc("/", handler.rootEndpoint)
+	myRouter.HandleFunc("/checkNumber", handler.checkNumberRequest).Methods("POST")
+	log.Fatal(http.ListenAndServe(":9001", myRouter))
+}
+
+func main() {
+	fmt.Println("Demo redis sql activemq")
+	conn, err := stomp.Dial("tcp", "localhost:61613", stomp.ConnOpt.HeartBeat(0, 0))
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	myhandler := &MyCustomHandler{conn: conn}
+	handleRequests(myhandler)
+
+}
