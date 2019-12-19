@@ -18,7 +18,11 @@ type MyCustomHandler struct {
 
 func (handler *MyCustomHandler) rootEndpoint(w http.ResponseWriter, r *http.Request) {
 	log.Println("ROOT HIT")
-	fmt.Fprintf(w, "Hello World! GOGOGOGOGOOGGOGOOGGOOGOGGOOGGOGOGOGOGOGGOGOGOGOGO ")
+	fmt.Fprintf(w, `
+	HOW TO
+		1. POST TO /checkNumber WITH DATA "command"="csr", "number"="XXXXXXXXXX" * X is any number
+		2. GET TO /getLog
+	`)
 }
 
 func (handler *MyCustomHandler) checkNumberRequest(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +96,7 @@ func main() {
 	defer func() {
 		log.Println("Exist")
 	}()
-	conn, err := stomp.Dial("tcp", "host.docker.internal:61613", stomp.ConnOpt.HeartBeat(0, 0))
+	conn, err := stomp.Dial("tcp", "localhost:61613", stomp.ConnOpt.HeartBeat(0, 0))
 	if err != nil {
 		fmt.Println(err)
 	}
