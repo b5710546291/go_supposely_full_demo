@@ -17,6 +17,7 @@ type MyCustomHandler struct {
 }
 
 func (handler *MyCustomHandler) rootEndpoint(w http.ResponseWriter, r *http.Request) {
+	log.Println("ROOT HIT")
 	fmt.Fprintf(w, "Hello World! GOGOGOGOGOOGGOGOOGGOOGOGGOOGGOGOGOGOGOGGOGOGOGOGO ")
 }
 
@@ -50,15 +51,43 @@ func (handler *MyCustomHandler) checkNumberRequest(w http.ResponseWriter, r *htt
 	}
 }
 
+func (handler *MyCustomHandler) getLog(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	err := handler.conn.Send(
+		"/topic/logreq", // destination
+		"text/plain",    // content-type
+		[]byte("log"))   // body
+	if err != nil {
+		panic(err.Error())
+	}
+	sub, err := handler.conn.Subscribe("/topic/logres/", stomp.AckAuto)
+	if err != nil {
+		panic(err.Error())
+	}
+	resp := <-sub.C
+	var sresp string = string(resp.Body)
+	log.Println("log request done")
+	fmt.Fprintf(w, sresp)
+
+	err = sub.Unsubscribe()
+	if err != nil {
+		panic(err.Error())
+	}
+}
+
 func handleRequests(handler *MyCustomHandler) {
 	myRouter := mux.NewRouter().StrictSlash(true)
 	myRouter.HandleFunc("/", handler.rootEndpoint)
 	myRouter.HandleFunc("/checkNumber", handler.checkNumberRequest).Methods("POST")
+	myRouter.HandleFunc("/getLog", handler.getLog).Methods("GET")
 	log.Fatal(http.ListenAndServe(":9001", myRouter))
 }
 
 func main() {
 	fmt.Println("Demo redis sql activemq")
+	defer func() {
+		log.Println("Exist")
+	}()
 	conn, err := stomp.Dial("tcp", "localhost:61613", stomp.ConnOpt.HeartBeat(0, 0))
 	if err != nil {
 		fmt.Println(err)
