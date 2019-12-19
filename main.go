@@ -27,8 +27,8 @@ func (handler *MyCustomHandler) rootEndpoint(w http.ResponseWriter, r *http.Requ
 
 func (handler *MyCustomHandler) checkNumberRequest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	number := r.FormValue("number")
-	command := r.FormValue("command")
+	number := r.PostFormValue("number")
+	command := r.PostFormValue("command")
 	if number != "" && len(number) == 10 && regexp.MustCompile(`^[0-9]+$`).MatchString(number) && command != "" && len(command) == 3 {
 		sub, err := handler.conn.Subscribe("/topic/response/"+command+number, stomp.AckAuto)
 		if err != nil {
